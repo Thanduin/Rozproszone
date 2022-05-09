@@ -4,6 +4,7 @@ import java.io.PrintWriter;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -16,8 +17,9 @@ public class EchoMultiServer {
     private final String poisonPill = "koniec";
     String[] odpowiedzi = {"1","2","3","4","5","6","7","8"};
     static int connectionCounter = 0;
-
+    static ArrayList<Thread> klienci = new ArrayList<>();
     public void start(int port) throws InterruptedException {
+        
         try {
             serverSocket = new ServerSocket(port);
             for(int i=0; i<8; i++){
@@ -49,6 +51,7 @@ public class EchoMultiServer {
         private BufferedReader in;
         private BlockingQueue<String> queue;
         private final String poisonPill;
+        int pozycja;
         public EchoClientHandler(Socket socket, BlockingQueue<String> queue, String poisonPill) {
             this.clientSocket = socket;
             this.queue = queue;
@@ -62,6 +65,8 @@ public class EchoMultiServer {
         public void run() {
             try {
                 //queue.put(poisonPill);
+                klienci.add(Thread.currentThread());
+                pozycja = klienci.size();
                 Thread obecny = currentThread();
                 Thread.currentThread().setPriority(priority);
                 priority++;
@@ -78,6 +83,10 @@ public class EchoMultiServer {
                             queue.put(Thread.currentThread().getName() + " rozlaczyl sie");
                         }
                         System.out.println("Zakonczono polaczenie z klientem " + Thread.currentThread().getName());
+                        klienci.remove(Thread.currentThread());
+                        for(Thread watek : klienci){
+                            System.out.println("Otrzymal wiadomosc: " + watek.getName());
+                        }
                         out.println("bye");
                         Thread.currentThread().interrupt();
                         break;
@@ -88,6 +97,7 @@ public class EchoMultiServer {
                     nameCheck++;
                     }
                     System.out.println(Thread.currentThread().getId());
+                    System.out.println("Pozycja: " + pozycja);
                     Thread.currentThread();
                     System.out.println("Aktywne: " + Thread.activeCount());
                     System.out.println("Otrzymano wiadomosc " + inputLine);
