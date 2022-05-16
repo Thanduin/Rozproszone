@@ -14,7 +14,6 @@ public class EchoMultiServer {
     private ServerSocket serverSocket;
     private static int priority = 1;
     BlockingQueue<String> queue = new LinkedBlockingDeque<>();
-    private final String poisonPill = "koniec";
     String[] odpowiedzi = {"1","2","3","4","5","6","7","8"};
     static int connectionCounter = 0;
     static ArrayList<Thread> klienci = new ArrayList<>();
@@ -26,7 +25,8 @@ public class EchoMultiServer {
                 queue.put(odpowiedzi[i]);
             }
             while (true)
-                new EchoClientHandler(serverSocket.accept(), queue, poisonPill).start();
+                new EchoClientHandler(serverSocket.accept(), queue).start();
+                
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -50,29 +50,26 @@ public class EchoMultiServer {
         private PrintWriter out;
         private BufferedReader in;
         private BlockingQueue<String> queue;
-        private final String poisonPill;
         int pozycja;
-        public EchoClientHandler(Socket socket, BlockingQueue<String> queue, String poisonPill) {
+        public EchoClientHandler(Socket socket, BlockingQueue<String> queue) {
             this.clientSocket = socket;
             this.queue = queue;
-            this.poisonPill = poisonPill;
         }
 
-        public void sendToAll(String msg) throws IOException{
-            out = new PrintWriter(clientSocket.getOutputStream(), true);
-        }
 
         public void run() {
             try {
                 //queue.put(poisonPill);
-                klienci.add(Thread.currentThread());
-                pozycja = klienci.size();
                 Thread obecny = currentThread();
-                Thread.currentThread().setPriority(priority);
+                klienci.add(obecny);
+                pozycja = klienci.size();
+                obecny.setName("klient " + pozycja);
+                System.out.println("Połączono z " + obecny.getName());
+                obecny.setPriority(priority);
                 priority++;
                 out = new PrintWriter(clientSocket.getOutputStream(), true);
                 in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                int nameCheck = 0;
+
 
                 String inputLine;
                 String queueTake;
@@ -80,42 +77,36 @@ public class EchoMultiServer {
                 while ((inputLine = in.readLine()) != null) {
                     if (".".equals(inputLine)) {
                         for(int i = 0; i < Thread.activeCount()-2; i++){
-                            queue.put(Thread.currentThread().getName() + " rozlaczyl sie");
+                            queue.put(obecny.getName() + " rozlaczyl sie");
                         }
-                        System.out.println("Zakonczono polaczenie z klientem " + Thread.currentThread().getName());
-                        klienci.remove(Thread.currentThread());
+                        System.out.println("Zakonczono polaczenie z klientem " + obecny.getName());
+                        klienci.remove(obecny);
                         for(Thread watek : klienci){
                             System.out.println("Otrzymal wiadomosc: " + watek.getName());
                         }
                         out.println("bye");
-                        Thread.currentThread().interrupt();
+                        obecny.interrupt();
                         break;
                     }
-                    if(nameCheck == 0){
-                    Thread.currentThread().setName(inputLine);
-                    //queue.put(inputLine);
-                    nameCheck++;
-                    }
-                    System.out.println(Thread.currentThread().getId());
+                    System.out.println(obecny.getId());
                     System.out.println("Pozycja: " + pozycja);
-                    Thread.currentThread();
                     System.out.println("Aktywne: " + Thread.activeCount());
                     System.out.println("Otrzymano wiadomosc " + inputLine);
                     queueTake = queue.take();
-                    if (queueTake.equals(Thread.currentThread().getName())){
+                    if (queueTake.equals(obecny.getName())){
                         for(int i = 0; i < Thread.activeCount(); i++){
-                            queue.put(Thread.currentThread().getName() + "rozlaczyl sie");
+                            queue.put(obecny.getName() + "rozlaczyl sie");
                         }
-                        System.out.println("Zakonczono polaczenie z klientem " + Thread.currentThread().getName());
+                        System.out.println("Zakonczono polaczenie z klientem " + obecny.getName());
                         out.println(queueTake + " bye");
-                        Thread.currentThread().interrupt();
+                        obecny.interrupt();
                         break;
                     }
                     if(queueTake.contains("rozlaczyl")){
-                        if(connectionCounter == obecny.activeCount()-2){
+                        if(connectionCounter == Thread.activeCount()-2){
                             synchronized(obecny){
                             obecny.notifyAll();
-                            queue.put(Thread.currentThread().getName() + " obudzil reszte");
+                            queue.put(obecny.getName() + " obudzil reszte");
                             queue.put("testowe");
                             }
                         } else
