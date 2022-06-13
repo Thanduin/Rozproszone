@@ -23,7 +23,7 @@ public class Peer {
     }
     String sendAndGetRespone(Peer peer , Message message , int timeOut){
         try{
-            Socket s=new Socket(peer.getHost(),peer.getPort());
+            Socket s=new Socket(peer.getMyHost(),peer.getPort());
             System.out.println("Wysylam "+message.toString()+" do "+ peer.getPort());
             s.setSoTimeout(timeOut);
             DataOutputStream dout=new DataOutputStream(s.getOutputStream());
